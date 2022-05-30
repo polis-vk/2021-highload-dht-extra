@@ -62,6 +62,7 @@ public final class RepairingMerger {
                 int keyComp = bestRecord.key.compareTo(candidateRecord.key);
                 if (keyComp > 0) {
                     updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
+                    continue;
                 } else if (keyComp < 0) {
                     continue;
                 }
@@ -70,6 +71,7 @@ public final class RepairingMerger {
                 int tsComp = Long.compare(bestRecord.ts, candidateRecord.ts);
                 if (tsComp < 0) {
                     updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
+                    continue;
                 } else if (tsComp > 0) {
                     continue;
                 }
@@ -89,7 +91,7 @@ public final class RepairingMerger {
                 int valueComp = bestRecord.value.compareTo(candidateRecord.value);
                 if (valueComp > 0) {
                     updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
-                } else if (tsComp < 0) {
+                } else if (valueComp < 0) {
                     continue;
                 }
             }
