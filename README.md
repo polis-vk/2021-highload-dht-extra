@@ -1,7 +1,7 @@
 # 2021-highload-dht-extra
 Задание для пересдачи [курса](https://polis.mail.ru/curriculum/program/discipline/1257/) "Проектирование высоконагруженных систем" в [Технополис](https://polis.mail.ru).
 
-## TBD
+## Экзамен 2022-05-30
 ### Fork
 [Форкните проект](https://help.github.com/articles/fork-a-repo/), склонируйте и добавьте `upstream`:
 ```
