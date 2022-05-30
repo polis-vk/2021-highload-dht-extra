@@ -4,12 +4,17 @@ import java.util.*;
 
 public final class RepairingMerger {
 
-    public static void updateBestMap(Map<String, Record> bestRecordsMap, Record prevBest, Record candidate) {
-        Record newBestRecord = new Record(
-                prevBest.node,
-                candidate.key, candidate.value, candidate.ts
-        );
-        bestRecordsMap.put(newBestRecord.key, newBestRecord);
+    public static void updateBestMap(Map<String, Record> bestRecordsMap, Map<String, List<Node>> updatesMap,
+                                     Record prevBest, Record newBest) {
+
+        bestRecordsMap.put(newBest.key, newBest);
+
+        if (!updatesMap.keySet().contains(newBest.key))
+            updatesMap.put(newBest.key, new ArrayList<>());
+
+        List<Node> updatedNodesForKey = updatesMap.get(newBest.key);
+        if (!updatedNodesForKey.contains(prevBest.node))
+            updatedNodesForKey.add(prevBest.node);
     }
 
     /**
@@ -29,6 +34,7 @@ public final class RepairingMerger {
      */
     public static Iterator<Record> mergeAndRepair(Map<Node, Iterator<Record>> nodesWithIterators) {
         Map<String, Record> bestRecordsMap = new HashMap<>();
+        Map<String, List<Node>> updatesMap = new HashMap<>();
 
         while (true) {
 
@@ -55,7 +61,7 @@ public final class RepairingMerger {
                 //------------------------ KEY COMPARISON ------------------------------------------------------
                 int keyComp = bestRecord.key.compareTo(candidateRecord.key);
                 if (keyComp > 0) {
-                    updateBestMap(bestRecordsMap, bestRecord, candidateRecord);
+                    updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
                 } else if (keyComp < 0) {
                     continue;
                 }
@@ -63,7 +69,7 @@ public final class RepairingMerger {
                 //------------------------ TS COMPARISON -------------------------------------------------------
                 int tsComp = Long.compare(bestRecord.ts, candidateRecord.ts);
                 if (tsComp < 0) {
-                    updateBestMap(bestRecordsMap, bestRecord, candidateRecord);
+                    updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
                 } else if (tsComp > 0) {
                     continue;
                 }
@@ -72,7 +78,7 @@ public final class RepairingMerger {
                 if (bestRecord.isTombstone() && !candidateRecord.isTombstone())
                     continue;
                 else if (!bestRecord.isTombstone() && candidateRecord.isTombstone()) {
-                    updateBestMap(bestRecordsMap, bestRecord, candidateRecord);
+                    updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
                     continue;
                 } else if (bestRecord.isTombstone() && candidateRecord.isTombstone()) {
                     continue;
@@ -82,17 +88,23 @@ public final class RepairingMerger {
                 //------------------------ VALUE COMPARISON ----------------------------------------------------
                 int valueComp = bestRecord.value.compareTo(candidateRecord.value);
                 if (valueComp > 0) {
-                    updateBestMap(bestRecordsMap, bestRecord, candidateRecord);
+                    updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
                 } else if (tsComp < 0) {
                     continue;
                 }
             }
         }
 
+        for (Map.Entry<String, List<Node>> entry : updatesMap.entrySet()) {
+            List<Node> updatedNodes = entry.getValue();
+            String updatedKey = entry.getKey();
+            for (Node node : updatedNodes)
+                node.update(bestRecordsMap.get(updatedKey));
+
+        }
+
         List<Record> bestRecords = new ArrayList<>();
         for (Map.Entry<String, Record> entry : bestRecordsMap.entrySet()) {
-//            Record record = entry.getValue();
-//            record.node.update(record);
             if (entry.getValue().value != null)
                 bestRecords.add(entry.getValue());
 
