@@ -9,16 +9,16 @@ final class MergeMultiIterator implements Iterator<Record> {
 
     private final Map<Node, PeekingIterator> nodesWithIterators;
 
+    private boolean hasNextCheck;
+
     MergeMultiIterator(Map<Node, PeekingIterator> nodesWithIterators) {
         this.nodesWithIterators = nodesWithIterators;
+        hasNextCheck = true;
     }
 
     @Override
     public boolean hasNext() {
-        return nodesWithIterators
-                .entrySet()
-                .stream()
-                .anyMatch(nodeIteratorEntry -> nodeIteratorEntry.getValue().hasNext());
+        return hasNextCheck;
     }
 
     @Override
@@ -66,6 +66,7 @@ final class MergeMultiIterator implements Iterator<Record> {
         Objects.requireNonNull(currentData);
 
         // Update others
+        hasNextCheck = false;
         for (Map.Entry<Node, PeekingIterator> entry : nodesWithIterators.entrySet()) {
             if (!entry.getValue().hasNext()) {
                 continue;
@@ -99,6 +100,10 @@ final class MergeMultiIterator implements Iterator<Record> {
                 }
             } else if (compareKeyResult < 0) {
                 updateNode(entry.getKey(), currentData.record);
+            }
+
+            if (entry.getValue().hasNext()) {
+                hasNextCheck = true;
             }
         }
 
