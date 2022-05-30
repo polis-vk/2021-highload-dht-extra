@@ -3,6 +3,15 @@ package ru.mail.polis;
 import java.util.*;
 
 public final class RepairingMerger {
+
+    public static void updateBestMap(Map<String, Record> bestRecordsMap, Record prevBest, Record candidate) {
+        Record newBestRecord = new Record(
+                prevBest.node,
+                candidate.key, candidate.value, candidate.ts
+        );
+        bestRecordsMap.put(newBestRecord.key, newBestRecord);
+    }
+
     /**
      * Merges <b>sorted</b> streams of {@link Record}s from cluster {@link Node}s and
      * <b>repairs</b> discrepancies using {@link Node#update(Record)} facility.
@@ -19,74 +28,75 @@ public final class RepairingMerger {
      * @return sorted stream of the freshest {@link Record} <b>without tombstones</b>
      */
     public static Iterator<Record> mergeAndRepair(Map<Node, Iterator<Record>> nodesWithIterators) {
-        Map<String, Record> keyRecordMap = new HashMap<>();
-        for (Map.Entry<Node, Iterator<Record>> nodeRecords1 : nodesWithIterators.entrySet()
-        ) {
-            for (Map.Entry<Node, Iterator<Record>> nodeRecords2 : nodesWithIterators.entrySet()
-            ) {
-                if (nodeRecords1.getKey() == nodeRecords2.getKey())
+        Map<String, Record> bestRecordsMap = new HashMap<>();
+
+        while (true) {
+
+            Map<Node, Record> currLayer = new HashMap<>();
+            for (Map.Entry<Node, Iterator<Record>> nodeIteratorEntry : nodesWithIterators.entrySet()) {
+                Iterator<Record> it = nodeIteratorEntry.getValue();
+                if (it.hasNext())
+                    currLayer.put(nodeIteratorEntry.getKey(), it.next());
+            }
+            if (currLayer.size() == 0)
+                break;
+
+            for (Record candidateRecord : currLayer.values()) {
+                if (!bestRecordsMap.keySet().contains(candidateRecord.key)) {
+                    bestRecordsMap.put(candidateRecord.key, candidateRecord);
                     continue;
-
-                for (Iterator<Record> it1 = nodeRecords1.getValue(); it1.hasNext(); ) {
-                    Record addedRecord = it1.next();
-                    if (keyRecordMap.keySet().contains(addedRecord.key))
-                        continue;
-                    for (Iterator<Record> it2 = nodeRecords2.getValue(); it2.hasNext(); ) {
-                        Record checkedRecord = it2.next();
-                        //------------------------ KEY COMPARISON ------------------------------------------------------
-                        int keyComp = addedRecord.key.compareTo(checkedRecord.key);
-                        if (keyComp < 0) {
-                            addedRecord = checkedRecord;
-                            //TODO synchronize
-                            break;
-                        } else if (keyComp > 0) {
-                            continue;
-                        }
-
-                        //------------------------ TS COMPARISON -------------------------------------------------------
-                        int tsComp = Long.compare(addedRecord.ts, checkedRecord.ts);
-                        if (tsComp < 0) {
-                            addedRecord = checkedRecord;
-                            //TODO synchronize
-                            break;
-                        } else if (tsComp > 0) {
-                            continue;
-                        }
-
-                        //------------------------ TOMBSTONES ----------------------------------------------------------
-                        if (addedRecord.value == null && checkedRecord.value != null)
-                            break;
-                        else if (addedRecord.value != null && checkedRecord.value == null) {
-                            addedRecord = checkedRecord;
-                            break;
-                        } else if (addedRecord.value == null && checkedRecord.value == null) {
-                            break;
-                        }
-
-
-                        //------------------------ VALUE COMPARISON ----------------------------------------------------
-                        int valueComp = addedRecord.value.compareTo(checkedRecord.value);
-                        if (valueComp > 0) {
-                            addedRecord = checkedRecord;
-                            //TODO synchronize
-                            break;
-                        } else if (valueComp < 0) {
-                            continue;
-                        }
-
-                    }
-                    keyRecordMap.put(addedRecord.key, addedRecord);
-
                 }
 
+                Record bestRecord = bestRecordsMap.get(candidateRecord.key);
+
+                if (bestRecord == candidateRecord)
+                    break;
+
+                //------------------------ KEY COMPARISON ------------------------------------------------------
+                int keyComp = bestRecord.key.compareTo(candidateRecord.key);
+                if (keyComp > 0) {
+                    updateBestMap(bestRecordsMap, bestRecord, candidateRecord);
+                } else if (keyComp < 0) {
+                    continue;
+                }
+
+                //------------------------ TS COMPARISON -------------------------------------------------------
+                int tsComp = Long.compare(bestRecord.ts, candidateRecord.ts);
+                if (tsComp < 0) {
+                    updateBestMap(bestRecordsMap, bestRecord, candidateRecord);
+                } else if (tsComp > 0) {
+                    continue;
+                }
+
+                //------------------------ TOMBSTONES ----------------------------------------------------------
+                if (bestRecord.isTombstone() && !candidateRecord.isTombstone())
+                    continue;
+                else if (!bestRecord.isTombstone() && candidateRecord.isTombstone()) {
+                    updateBestMap(bestRecordsMap, bestRecord, candidateRecord);
+                    continue;
+                } else if (bestRecord.isTombstone() && candidateRecord.isTombstone()) {
+                    continue;
+                }
+
+
+                //------------------------ VALUE COMPARISON ----------------------------------------------------
+                int valueComp = bestRecord.value.compareTo(candidateRecord.value);
+                if (valueComp > 0) {
+                    updateBestMap(bestRecordsMap, bestRecord, candidateRecord);
+                } else if (tsComp < 0) {
+                    continue;
+                }
             }
         }
-        List<Record> finalList = new ArrayList<>();
-        for (Map.Entry<String, Record> entry : keyRecordMap.entrySet()) {
+
+        List<Record> bestRecords = new ArrayList<>();
+        for (Map.Entry<String, Record> entry : bestRecordsMap.entrySet()) {
+//            Record record = entry.getValue();
+//            record.node.update(record);
             if (entry.getValue().value != null)
-                finalList.add(entry.getValue());
+                bestRecords.add(entry.getValue());
 
         }
-        return finalList.iterator();
+        return bestRecords.iterator();
     }
 }
