@@ -98,8 +98,9 @@ public final class RepairingMerger {
         for (Map.Entry<String, List<Node>> entry : updatesMap.entrySet()) {
             List<Node> updatedNodes = entry.getValue();
             String updatedKey = entry.getKey();
+            Record updatedRecord = bestRecordsMap.get(updatedKey);
             for (Node node : updatedNodes)
-                node.update(bestRecordsMap.get(updatedKey));
+                node.update(updatedRecord);
 
         }
 
