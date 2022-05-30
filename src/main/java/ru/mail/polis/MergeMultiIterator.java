@@ -13,7 +13,15 @@ final class MergeMultiIterator implements Iterator<Record> {
 
     MergeMultiIterator(Map<Node, PeekingIterator> nodesWithIterators) {
         this.nodesWithIterators = nodesWithIterators;
-        hasNextCheck = true;
+        hasNextCheck = false;
+        if (nodesWithIterators != null) {
+            for (PeekingIterator iter : nodesWithIterators.values()) {
+                if (iter.hasNext()) {
+                    hasNextCheck = true;
+                    break;
+                }
+            }
+        }
     }
 
     @Override
@@ -51,7 +59,7 @@ final class MergeMultiIterator implements Iterator<Record> {
                                     currentData = new CurrentData(entry.getKey(), recordNext, entry.getValue());
                                 }
                             }
-                        } else if (!currentData.record.isTombstone()){
+                        } else if (!currentData.record.isTombstone()) {
                             currentData = new CurrentData(entry.getKey(), recordNext, entry.getValue());
                         }
                     } else if (currentData.record.ts < recordNext.ts) {
