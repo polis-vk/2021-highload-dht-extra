@@ -64,6 +64,7 @@ public final class RepairingMerger {
                     updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
                     continue;
                 } else if (keyComp < 0) {
+                    updateBestMap(bestRecordsMap, updatesMap, candidateRecord, bestRecord);
                     continue;
                 }
 
@@ -73,13 +74,15 @@ public final class RepairingMerger {
                     updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
                     continue;
                 } else if (tsComp > 0) {
+                    updateBestMap(bestRecordsMap, updatesMap, candidateRecord, bestRecord);
                     continue;
                 }
 
                 //------------------------ TOMBSTONES ----------------------------------------------------------
-                if (bestRecord.isTombstone() && !candidateRecord.isTombstone())
+                if (bestRecord.isTombstone() && !candidateRecord.isTombstone()) {
+                    updateBestMap(bestRecordsMap, updatesMap, candidateRecord, bestRecord);
                     continue;
-                else if (!bestRecord.isTombstone() && candidateRecord.isTombstone()) {
+                } else if (!bestRecord.isTombstone() && candidateRecord.isTombstone()) {
                     updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
                     continue;
                 } else if (bestRecord.isTombstone() && candidateRecord.isTombstone()) {
@@ -92,6 +95,7 @@ public final class RepairingMerger {
                 if (valueComp > 0) {
                     updateBestMap(bestRecordsMap, updatesMap, bestRecord, candidateRecord);
                 } else if (valueComp < 0) {
+                    updateBestMap(bestRecordsMap, updatesMap, candidateRecord, bestRecord);
                     continue;
                 }
             }
