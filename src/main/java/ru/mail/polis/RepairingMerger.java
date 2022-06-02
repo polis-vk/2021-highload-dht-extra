@@ -23,8 +23,8 @@ public final class RepairingMerger {
     public static Iterator<Record> mergeAndRepair(Map<Node, Iterator<Record>> nodesWithIterators) {
         Map<Node, PeekIterator<Record>> peekIterators = new HashMap<>();
         for (Map.Entry<Node, Iterator<Record>> entry : nodesWithIterators.entrySet())
-            peekIterators.put(entry.getKey(), new PeekIterator<Record>(entry.getValue()));
-        MergeIterator mergeIterator = new MergeIterator(peekIterators);
+            peekIterators.put(entry.getKey(), new PeekIterator<>(entry.getValue()));
+        MergeIterator mergeIterator = new MergeIterator(peekIterators, new RecordComparator());
 
         return new TombstoneFilterIterator(mergeIterator);
     }

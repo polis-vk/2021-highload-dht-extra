@@ -1,5 +1,6 @@
 package ru.mail.polis;
 
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.LinkedList;
@@ -7,6 +8,7 @@ import java.util.Map;
 
 public class MergeIterator implements Iterator<Record> {
     private final Map<Node, PeekIterator<Record>> peekIteratorsMap;
+    private final Comparator<Record> recordComparator;
 
     public static class NodeData {
         private final Node node;
@@ -21,8 +23,9 @@ public class MergeIterator implements Iterator<Record> {
     }
 
 
-    MergeIterator(Map<Node, PeekIterator<Record>> peekIterators) {
+    MergeIterator(Map<Node, PeekIterator<Record>> peekIterators, Comparator<Record> recordComparator) {
         this.peekIteratorsMap = peekIterators;
+        this.recordComparator = recordComparator;
     }
 
     @Override
@@ -47,7 +50,7 @@ public class MergeIterator implements Iterator<Record> {
             if (bestData == null)
                 bestData = currData;
 
-            int compRes = bestData.record.compareTo(currData.record);
+            int compRes = recordComparator.compare(bestData.record, currData.record);
             if (compRes < 0)
                 bestData = currData;
 
@@ -69,7 +72,7 @@ public class MergeIterator implements Iterator<Record> {
                 continue;
             }
 
-            int compRes = bestData.record.compareTo(currData.record);
+            int compRes = recordComparator.compare(bestData.record, currData.record);
             assert compRes >= 0;//logic bugs catching
             if (compRes > 0) {
                 //overwriting record in another node

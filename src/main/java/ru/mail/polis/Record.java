@@ -1,6 +1,6 @@
 package ru.mail.polis;
 
-public class Record implements Comparable<Record> {
+public class Record {
 
     public final Node node;
     public final String key;
@@ -28,28 +28,4 @@ public class Record implements Comparable<Record> {
                 '}';
     }
 
-    @Override
-    public int compareTo(Record record) {
-        int compareKey = this.key.compareTo(record.key);
-        if (compareKey != 0)
-            return -compareKey;
-
-        int compareTs = Long.compare(this.ts, record.ts);
-        if (compareTs != 0)
-            return compareTs;
-
-        if (this.isTombstone() && record.isTombstone())
-            return 0;
-        else if (this.isTombstone())
-            return 1;
-        else if (record.isTombstone())
-            return -1;
-
-        int compareVal = this.value.compareTo(record.value);
-        if (compareVal != 0)
-            return -compareVal;
-
-        return 0;
-
-    }
 }
