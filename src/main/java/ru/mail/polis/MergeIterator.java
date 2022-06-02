@@ -38,12 +38,9 @@ public class MergeIterator implements Iterator<Record> {
 
     @Override
     public Record next() {
-        List<NodeData> currLayer = new LinkedList<>();
         NodeData bestData = null;
         for (Map.Entry<Node, PeekIterator<Record>> entry : peekIteratorsMap.entrySet()) {
             NodeData currData = new NodeData(entry.getKey(), entry.getValue(), entry.getValue().peek());
-            currLayer.add(currData);
-
             if (currData.record == null)
                 continue;
 
@@ -58,7 +55,8 @@ public class MergeIterator implements Iterator<Record> {
 
         assert bestData != null;
 
-        for (NodeData currData : currLayer) {
+        for (Map.Entry<Node, PeekIterator<Record>> entry : peekIteratorsMap.entrySet()) {
+            NodeData currData = new NodeData(entry.getKey(), entry.getValue(), entry.getValue().peek());
             if (currData.record == null) {
                 currData.node.update(bestData.record);
                 continue;
