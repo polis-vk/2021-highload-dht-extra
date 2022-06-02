@@ -57,21 +57,20 @@ public class MergeIterator implements Iterator<Record> {
 
         for (NodeData currData : currLayer) {
             int compKey = bestData.record.key.compareTo(currData.record.key);
+            assert compKey <= 0;//logic bugs catching
             if (compKey < 0) {
+                //missed key in another node
                 currData.node.update(bestData.record);
-                continue;
-            } else if (compKey > 0) {
-                currData.iterator.next();
                 continue;
             }
 
             int compRes = bestData.record.compareTo(currData.record);
+            assert compRes >= 0;//logic bugs catching
             if (compRes > 0) {
+                //overwriting record in another node
                 currData.node.update(bestData.record);
-                currData.iterator.next();
-            } else {
-                currData.iterator.next();
             }
+            currData.iterator.next();
 
         }
 
