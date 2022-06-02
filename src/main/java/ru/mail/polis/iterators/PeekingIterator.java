@@ -17,14 +17,12 @@ public class PeekingIterator implements Iterator<Record> {
     public boolean hasNext() {
         return (nextValue != null);
     }
-
     @Override
     public Record next() {
         Record oldValue = peek();
         nextValue = this.records.hasNext()? this.records.next() : null;
         return oldValue;
     }
-
     public Record peek(){
         return nextValue;
 
