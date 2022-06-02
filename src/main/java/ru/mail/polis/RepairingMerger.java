@@ -1,7 +1,12 @@
 package ru.mail.polis;
 
+import ru.mail.polis.iterators.MergeTombstone;
+import ru.mail.polis.iterators.PeekingIterator;
+
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 public final class RepairingMerger {
     /**
@@ -20,6 +25,16 @@ public final class RepairingMerger {
      * @return sorted stream of the freshest {@link Record} <b>without tombstones</b>
      */
     public static Iterator<Record> mergeAndRepair(Map<Node, Iterator<Record>> nodesWithIterators) {
-        throw new UnsupportedOperationException("Implement me!");
+        Map<Node, PeekingIterator > possibleMap = new HashMap<>();
+
+        //Let define our entries set
+        Set<Map.Entry<Node,Iterator<Record>>> entries = nodesWithIterators.entrySet();
+
+        for (Map.Entry<Node,Iterator<Record>> entry : entries)
+        {
+            possibleMap.put(entry.getKey(), new PeekingIterator(entry.getValue()));
+        }
+        MergeAndUpdate mergeAndUpdate =  new MergeAndUpdate(possibleMap);
+        return new MergeTombstone(mergeAndUpdate);
     }
 }
