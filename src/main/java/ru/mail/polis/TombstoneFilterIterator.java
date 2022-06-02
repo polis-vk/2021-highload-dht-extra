@@ -5,11 +5,11 @@ import java.util.NoSuchElementException;
 
 public class TombstoneFilterIterator implements Iterator<Record> {
 
-    private final MergeIterator mergeIterator;
+    private final Iterator<Record> delegate;
     private Record currAlive;
 
     TombstoneFilterIterator(MergeIterator mergeIterator) {
-        this.mergeIterator = mergeIterator;
+        this.delegate = mergeIterator;
         this.currAlive = peekNextAlive();
     }
 
@@ -29,8 +29,8 @@ public class TombstoneFilterIterator implements Iterator<Record> {
 
     Record peekNextAlive() {
         Record nextAlive;
-        while (mergeIterator.hasNext()) {
-            nextAlive = mergeIterator.next();
+        while (delegate.hasNext()) {
+            nextAlive = delegate.next();
             if (!nextAlive.isTombstone())
                 return nextAlive;
         }
