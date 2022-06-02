@@ -62,7 +62,6 @@ public class SingleCellCluster2Test extends TestBase {
         assertKeyValues(result,
                 "a", "2"
         );
-
         assertUpdated(n1, "a", "2");
         assertUpdated(n2);
     }

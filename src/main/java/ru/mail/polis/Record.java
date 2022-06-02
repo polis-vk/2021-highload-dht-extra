@@ -1,6 +1,6 @@
 package ru.mail.polis;
 
-public class Record {
+public class Record  {
 
     public final Node node;
     public final String key;
@@ -27,4 +27,6 @@ public class Record {
                 ", ts=" + ts +
                 '}';
     }
+
+
 }
