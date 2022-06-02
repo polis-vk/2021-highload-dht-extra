@@ -1,8 +1,8 @@
 package ru.mail.polis;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.Map;
 
 public class MergeIterator implements Iterator<Record> {
@@ -35,7 +35,7 @@ public class MergeIterator implements Iterator<Record> {
 
     @Override
     public Record next() {
-        List<NodeData> currLayer = new ArrayList<>(peekIteratorsMap.size());
+        List<NodeData> currLayer = new LinkedList<>();
         NodeData bestData = null;
         for (Map.Entry<Node, PeekIterator<Record>> entry : peekIteratorsMap.entrySet()) {
             if (!entry.getValue().hasNext())
