@@ -3,12 +3,12 @@ package ru.mail.polis;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class PeekIterator<R> implements Iterator<Record> {
+public class PeekIterator<R> implements Iterator<R> {
 
-    private final Iterator<Record> delegate;
-    private Record current;
+    private final Iterator<R> delegate;
+    private R current;
 
-    PeekIterator(Iterator<Record> delegate) {
+    PeekIterator(Iterator<R> delegate) {
         this.delegate = delegate;
     }
 
@@ -17,7 +17,7 @@ public class PeekIterator<R> implements Iterator<Record> {
         return delegate.hasNext() || current != null;
     }
 
-    Record peek() {
+    R peek() {
         if (current != null)
             return current;
 
@@ -29,11 +29,11 @@ public class PeekIterator<R> implements Iterator<Record> {
     }
 
     @Override
-    public Record next() {
+    public R next() {
         if (!hasNext())
             throw new NoSuchElementException();
 
-        Record prevPeek = peek();
+        R prevPeek = peek();
         current = null;
         return prevPeek;
 
