@@ -13,6 +13,10 @@ public class MergeAndUpdate implements Iterator<Record> {
     private Record finalExpectedRecord;
     private boolean validate ;
 
+//    public class Data {
+//
+//    }
+
     public MergeAndUpdate(Map<Node, PeekingIterator> nodesWithRecords)
     {
         this.nodesWithRecords = nodesWithRecords;
@@ -29,21 +33,28 @@ public class MergeAndUpdate implements Iterator<Record> {
     }
     @Override
     public Record next() {
-        Record currentRecord;
+        Record currentRecord = null;
         //-------------MERGE NODES----------
         for(Map.Entry<Node,PeekingIterator> entry : nodesWithRecords.entrySet()){
             if(!hasNext())
             {
                throw new NoSuchElementException("No elements founds");
             }
-            if(this.finalExpectedRecord == null)
+            if(!entry.getValue().hasNext())
+            {
+                continue;
+            }
+
+            if(this.finalExpectedRecord == null )
             {
                 currentRecord = entry.getValue().peek();
                 this.finalExpectedRecord = currentRecord;
             }
-            else
+
+            Record nextRecord = entry.getValue().peek();
+            if (nextRecord!= null)
             {
-                Record nextRecord = entry.getValue().peek();
+                //Objects.requireNonNull(nextRecord);
                 //COMPARISON
                 int compareKeys = this.finalExpectedRecord.key.compareTo(nextRecord.key);
                 if(compareKeys > 0) //keys
@@ -80,35 +91,41 @@ public class MergeAndUpdate implements Iterator<Record> {
             {
                 continue;
             }
-            Record currRecord = Objects.requireNonNull(entry.getValue().peek());
-            int compareKeys = this.finalExpectedRecord.key.compareTo(currRecord.key); // keys
-            if(compareKeys<0){
+
+            Record currRecord = entry.getValue().peek();
+            if(currentRecord == null)
+            {
                 entry.getKey().update(this.finalExpectedRecord);
             }
-            int compareTimeStamp = Long.compare(this.finalExpectedRecord.ts,currRecord.ts); //ts
-            if (compareTimeStamp > 0){
+            else {
+                int compareKeys = this.finalExpectedRecord.key.compareTo(currRecord.key); // keys
+                if(compareKeys<0){
                     entry.getKey().update(this.finalExpectedRecord);
-                    //entry.getValue().next();
-            }
-            else if(compareTimeStamp == 0)
-                {
-                    if(!currRecord.isTombstone()){
-                        if (this.finalExpectedRecord.isTombstone()){
-                           entry.getKey().update(this.finalExpectedRecord);
-                           entry.getValue().next();
-                        }
-                        else{
-                            int compareValues = this.finalExpectedRecord.value.compareTo(currRecord.value);//values
-                            if (compareValues <0){
-                                entry.getKey().update(this.finalExpectedRecord);
-                                entry.getValue().next();
+                }
+                int compareTimeStamp = Long.compare(this.finalExpectedRecord.ts,currRecord.ts); //ts
+                if (compareTimeStamp > 0){
+                        entry.getKey().update(this.finalExpectedRecord);
+                        //entry.getValue().next();
+                }
+                else if(compareTimeStamp == 0)
+                    {
+                        if(!currRecord.isTombstone()){
+                            if (this.finalExpectedRecord.isTombstone()){
+                               entry.getKey().update(this.finalExpectedRecord);
+                               entry.getValue().next();
+                            }
+                            else{
+                                int compareValues = this.finalExpectedRecord.value.compareTo(currRecord.value);//values
+                                if (compareValues <0){
+                                    entry.getKey().update(this.finalExpectedRecord);
+                                    entry.getValue().next();
+                                }
                             }
                         }
-                    }
 
+                    }
                 }
-            }
-        //}
+        }
         return Objects.requireNonNull(this.finalExpectedRecord);
     }
 }
