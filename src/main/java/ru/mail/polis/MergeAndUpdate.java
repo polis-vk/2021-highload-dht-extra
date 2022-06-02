@@ -1,131 +1,128 @@
 package ru.mail.polis;
 
 import ru.mail.polis.iterators.PeekingIterator;
+import ru.mail.polis.utils.CurrentNode;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Objects;
+import java.util.*;
 
 public class MergeAndUpdate implements Iterator<Record> {
 
-    private Map<Node,PeekingIterator> nodesWithRecords;
-    private Record finalExpectedRecord;
-    private boolean validate ;
-
-//    public class Data {
-//
-//    }
+    private final Map<Node,PeekingIterator> nodesWithRecords;
+    private final Set<Map.Entry<Node,PeekingIterator>> entries;
 
     public MergeAndUpdate(Map<Node, PeekingIterator> nodesWithRecords)
     {
         this.nodesWithRecords = nodesWithRecords;
-        for (PeekingIterator peekingIterator : nodesWithRecords.values()){
-            if (peekingIterator.hasNext()) {
-                validate = true;
-                break;
-            }
-        }
+        this.entries = this.nodesWithRecords.entrySet();
     }
     @Override
     public boolean hasNext() {
-        return validate;
+        for (PeekingIterator peekingIterator : nodesWithRecords.values())
+            if (peekingIterator.hasNext())
+                return true;
+        return false;
     }
     @Override
     public Record next() {
-        Record currentRecord = null;
-        //-------------MERGE NODES----------
-        for(Map.Entry<Node,PeekingIterator> entry : nodesWithRecords.entrySet()){
-            if(!hasNext())
-            {
-               throw new NoSuchElementException("No elements founds");
-            }
+        CurrentNode currentNode = null;
+        for(Map.Entry<Node,PeekingIterator> entry : entries){
             if(!entry.getValue().hasNext())
             {
                 continue;
             }
-
-            if(this.finalExpectedRecord == null )
+            if (currentNode == null )
             {
-                currentRecord = entry.getValue().peek();
-                this.finalExpectedRecord = currentRecord;
+                currentNode = new CurrentNode(entry.getKey(), entry.getValue(), Objects.requireNonNull(entry.getValue().peek()));
             }
+            //When a current record is null
+            if (currentNode.getRecord() == null)
+                continue;
 
             Record nextRecord = entry.getValue().peek();
+
             if (nextRecord!= null)
             {
-                //Objects.requireNonNull(nextRecord);
-                //COMPARISON
-                int compareKeys = this.finalExpectedRecord.key.compareTo(nextRecord.key);
+                int compareKeys = currentNode.getRecord().key.compareTo(nextRecord.key);
+
                 if(compareKeys > 0) //keys
                 {
-                    this.finalExpectedRecord = nextRecord;
+                    currentNode = new CurrentNode(entry.getKey(), entry.getValue(),nextRecord);
                 }
                 else if (compareKeys == 0)
                 {
-                    int compareTimeStamp = Long.compare(this.finalExpectedRecord.ts,nextRecord.ts); //ts
+                    int compareTimeStamp = Long.compare(currentNode.getRecord().ts,nextRecord.ts); //ts
                     if (compareTimeStamp < 0){
-                        this.finalExpectedRecord = nextRecord;
+                        currentNode = new CurrentNode(entry.getKey(), entry.getValue(),nextRecord);
                     }
                     else if (compareTimeStamp == 0){
-                        if(!nextRecord.isTombstone() && !this.finalExpectedRecord.isTombstone())
+                        if(!nextRecord.isTombstone() && !currentNode.getRecord().isTombstone())
                         {
-                            int compareValues = this.finalExpectedRecord.value.compareTo(nextRecord.value);
+                            int compareValues = currentNode.getRecord().value.compareTo(nextRecord.value);
                             if (compareValues > 0)
                             {
-                                this.finalExpectedRecord = nextRecord;
+                                currentNode = new CurrentNode(entry.getKey(), entry.getValue(),nextRecord);
                             }
                         }
-                        else if(!this.finalExpectedRecord.isTombstone()){
-                            this.finalExpectedRecord = nextRecord;
+                        else if(! currentNode.getRecord().isTombstone()){
+                            currentNode = new CurrentNode(entry.getKey(), entry.getValue(),nextRecord);
                         }
                     }
                 }
             }
         }
-        validate = false;
         //---------UPDATE NODES-----------
-        for(Map.Entry<Node,PeekingIterator> entry : nodesWithRecords.entrySet()){
+        updateNodes(currentNode);
 
-            if(!entry.getValue().hasNext())
-            {
+        assert currentNode != null;
+        return currentNode.getRecord();
+    }
+
+    public void updateNodes(CurrentNode dataNode){
+
+        for (Map.Entry<Node, PeekingIterator> entry : entries) {
+            CurrentNode currentNode = new CurrentNode(entry.getKey(), entry.getValue(),entry.getValue().peek());
+
+            if (!entry.getValue().hasNext()) {
+                currentNode.getNode().update(dataNode.getRecord());
                 continue;
             }
-
-            Record currRecord = entry.getValue().peek();
-            if(currentRecord == null)
-            {
-                entry.getKey().update(this.finalExpectedRecord);
+           //When a current record is null
+            if (currentNode.getRecord() == null) {
+                currentNode.getNode().update(dataNode.getRecord());
+                continue;
             }
-            else {
-                int compareKeys = this.finalExpectedRecord.key.compareTo(currRecord.key); // keys
-                if(compareKeys<0){
-                    entry.getKey().update(this.finalExpectedRecord);
+            int compareKeyResult = dataNode.getRecord().key.compareTo(currentNode.getRecord().key);
+            if (compareKeyResult < 0) {
+                currentNode.getNode().update(dataNode.getRecord());
+            }
+            else if (compareKeyResult == 0) {
+                int compareTimeStamp = Long.compare(currentNode.getRecord().ts,dataNode.getRecord().ts); //ts
+
+                if (compareTimeStamp < 0){
+                    currentNode.getNode().update(dataNode.getRecord());
+                    currentNode.getIterator().next();
                 }
-                int compareTimeStamp = Long.compare(this.finalExpectedRecord.ts,currRecord.ts); //ts
-                if (compareTimeStamp > 0){
-                        entry.getKey().update(this.finalExpectedRecord);
-                        //entry.getValue().next();
-                }
-                else if(compareTimeStamp == 0)
-                    {
-                        if(!currRecord.isTombstone()){
-                            if (this.finalExpectedRecord.isTombstone()){
-                               entry.getKey().update(this.finalExpectedRecord);
-                               entry.getValue().next();
-                            }
-                            else{
-                                int compareValues = this.finalExpectedRecord.value.compareTo(currRecord.value);//values
-                                if (compareValues <0){
-                                    entry.getKey().update(this.finalExpectedRecord);
-                                    entry.getValue().next();
+                 else if (compareTimeStamp == 0) {
+                        if (!currentNode.getRecord().isTombstone()) {
+                            if (dataNode.getRecord().isTombstone()) {
+                                currentNode.getNode().update(dataNode.getRecord());
+                                currentNode.getIterator().next();
+                            } else {
+                                int compareValueResult = dataNode.getRecord().value.compareTo(currentNode.getRecord().value);
+                                if (compareValueResult == 0) {
+                                    currentNode.getIterator().next();
+                                } else if (compareValueResult < 0) {
+                                    currentNode.getNode().update(dataNode.getRecord());
+                                    currentNode.getIterator().next();
                                 }
                             }
+                        } else {
+                            if (dataNode.getRecord().isTombstone()) {
+                                currentNode.getIterator().next();
+                            }
                         }
-
                     }
                 }
+            }
         }
-        return Objects.requireNonNull(this.finalExpectedRecord);
     }
-}
