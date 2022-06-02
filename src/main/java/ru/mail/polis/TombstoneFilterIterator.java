@@ -15,7 +15,7 @@ public class TombstoneFilterIterator implements Iterator<Record> {
 
     @Override
     public boolean hasNext() {
-        return currAlive != null && !currAlive.isTombstone();
+        return currAlive != null;
     }
 
     @Override
